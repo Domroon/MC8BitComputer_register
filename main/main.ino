@@ -31,12 +31,38 @@ class Timer{
 Timer LED_buildin_timer(500);
 bool led_state = LOW;
 
+Timer infoTimer(10);
+int analogA7value = 0;
+bool clock_high = HIGH;
+bool clock_high_before = false;
+
 void setup() {
+    Serial.begin(9600);
     pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(A7, INPUT);
 }
 
 void loop() {
     change_led_builtin_state();
+    check_clock();
+
+    if(clock_high){
+      clock_high_before = true;
+    }
+
+    if(!clock_high && clock_high_before){
+      Serial.println("Clock changes from HIGH to LOW");
+      clock_high_before = false;
+    }
+}
+
+void check_clock(){
+  analogA7value = analogRead(A7);
+  if(analogA7value > 800){
+    clock_high = 1;
+  } else if(analogA7value < 250) {
+    clock_high = 0;
+  }
 }
 
 void change_led_builtin_state(){
