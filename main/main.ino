@@ -28,6 +28,14 @@ class Timer{
     }
 };
 
+#define LATCH_PIN_REG_A     A0     // Pin connected to ST_CP of 74HC595
+#define LATCH_PIN_REG_B     A1     // Pin connected to ST_CP of 74HC595
+#define CLOCK_PIN           12     // Pin connected to SH_CP of 74HC595
+#define DATA_PIN            11     // Pin connected to DS of 74HC595
+
+#define REGISTER_A          0
+#define REGISTER_B          1
+
 Timer LED_buildin_timer(500);
 bool led_state = LOW;
 
@@ -36,10 +44,23 @@ int analogA7value = 0;
 bool clock_high = HIGH;
 bool clock_high_before = false;
 
+// test variables
+byte numberToDisplay = 0;
+
 void setup() {
-    Serial.begin(9600);
-    pinMode(LED_BUILTIN, OUTPUT);
-    pinMode(A7, INPUT);
+  Serial.begin(9600);
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(A7, INPUT);
+
+  // shift register
+  pinMode(LATCH_PIN_REG_A, OUTPUT);
+  pinMode(LATCH_PIN_REG_B, OUTPUT);
+  pinMode(CLOCK_PIN, OUTPUT);
+  pinMode(DATA_PIN, OUTPUT);
+
+  // init registers
+  writeToShiftRegister(0, REGISTER_A);
+  writeToShiftRegister(0, REGISTER_B);
 }
 
 void loop() {
@@ -51,9 +72,15 @@ void loop() {
     }
 
     if(!clock_high && clock_high_before){
-      Serial.println("Clock changes from HIGH to LOW");
       clock_high_before = false;
-    }
+      Serial.println("Clock changes from HIGH to LOW");
+      writeToShiftRegister(numberToDisplay, REGISTER_A);
+      writeToShiftRegister(numberToDisplay, REGISTER_B);
+      if(numberToDisplay > 256) {
+        numberToDisplay = 0;
+      }
+      numberToDisplay++;
+    }   
 }
 
 void check_clock(){
@@ -71,4 +98,25 @@ void change_led_builtin_state(){
         digitalWrite(LED_BUILTIN, led_state);
         LED_buildin_timer.restart();
     }
+}
+
+void writeToShiftRegister(byte data, byte shiftregister){
+  int latch_pin;
+  if(shiftregister == REGISTER_A){
+    latch_pin = LATCH_PIN_REG_A;
+  } else if(shiftregister == REGISTER_B){
+    latch_pin = LATCH_PIN_REG_B;
+  }  
+
+  digitalWrite(latch_pin, LOW);
+  if(shiftregister == REGISTER_A){
+    shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, 0);
+  }
+
+  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, numberToDisplay);
+
+  if(shiftregister == REGISTER_B){
+    shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, 0);
+  }
+  digitalWrite(latch_pin, HIGH);
 }
