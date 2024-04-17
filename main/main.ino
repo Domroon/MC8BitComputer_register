@@ -1,3 +1,30 @@
+// for use in the program
+#define REGISTER_A          0
+#define REGISTER_B          1
+
+// Shift Register Pins
+#define LATCH_PIN_REG_A     A0     // Pin connected to ST_CP of 74HC595
+#define LATCH_PIN_REG_B     A1     // Pin connected to ST_CP of 74HC595
+#define CLOCK_PIN           12     // Pin connected to SH_CP of 74HC595
+#define DATA_PIN            11     // Pin connected to DS of 74HC595
+
+// Bus Pins
+#define BIT0                2
+#define BIT1                3
+#define BIT2                4
+#define BIT3                5
+#define BIT4                6
+#define BIT5                7
+#define BIT6                8
+#define BIT7                9
+
+// Control Signal Pins
+#define AI                  A2      // enable Register A INPUT
+#define AO                  A3      // enable Register A OUTPUT
+#define BI                  A4      // enable Register B INPUT
+
+#define CLK                 A7
+
 class Timer{
   private:
     unsigned long _startMillis = 0;
@@ -28,50 +55,25 @@ class Timer{
     }
 };
 
-#define CLK                 A7
-
-#define LATCH_PIN_REG_A     A0     // Pin connected to ST_CP of 74HC595
-#define LATCH_PIN_REG_B     A1     // Pin connected to ST_CP of 74HC595
-#define CLOCK_PIN           12     // Pin connected to SH_CP of 74HC595
-#define DATA_PIN            11     // Pin connected to DS of 74HC595
-
-#define REGISTER_A          0
-#define REGISTER_B          1
-
-#define BIT0                2
-#define BIT1                3
-#define BIT2                4
-#define BIT3                5
-#define BIT4                6
-#define BIT5                7
-#define BIT6                8
-#define BIT7                9
-
-#define AI                  A2      // enable Register A INPUT
-#define AO                  A3      // enable Register A OUTPUT
-#define BI                  A4      // enable Register B INPUT
-
+// Timer
 Timer LED_buildin_timer(500);
 bool led_state = LOW;
 
-Timer infoTimer(10);
+// Clock
 int analogA7value = 0;
 bool clock_high = HIGH;
 bool clock_high_before = false;
 bool clock_is_falling = false;
 
-// test variables
-byte numberToDisplay = 0;
-
+// Bus and Register
 byte bus_data = 0;
 byte register_a_data = 0;
 byte register_b_data = 0;
 
-// control signals
+// Control Signals
 bool input_A_enabled = false;
 bool output_A_enabled = false;
 bool input_B_enabled = false;
-
 
 void setup() {
   Serial.begin(9600);
