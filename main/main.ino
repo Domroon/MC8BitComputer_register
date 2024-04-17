@@ -58,6 +58,7 @@ Timer infoTimer(10);
 int analogA7value = 0;
 bool clock_high = HIGH;
 bool clock_high_before = false;
+bool clock_is_falling = false;
 
 // test variables
 byte numberToDisplay = 0;
@@ -100,63 +101,71 @@ void setup() {
 
 void loop() {
     change_led_builtin_state();
-    check_clock();
+    clock_high = check_clock();
+    clock_is_falling = check_falling_clock();
     read_control_signals();
 
-
-    
-
-    // read bus
-    if(input_A_enabled && !clock_high && clock_high_before){
-      read_bus();
-      Serial.println("READ BUS DATA into Register A");
-      Serial.print("BUS DATA: ");
-      Serial.println(bus_data);
-      writeToShiftRegister(bus_data, REGISTER_A);
-      register_a_data = bus_data;
+    // read from bus
+    if(input_A_enabled && clock_is_falling){
+      bus_data = read_bus();
+      write_to_register(bus_data, REGISTER_A);
     }
-    if(input_B_enabled && !clock_high && clock_high_before){
-      read_bus();
-      Serial.println("READ BUS DATA into Register B");
-      Serial.print("BUS DATA: ");
-      Serial.println(bus_data);
-      writeToShiftRegister(bus_data, REGISTER_B);
-      register_b_data = bus_data;
+    if(input_B_enabled && clock_is_falling){
+      bus_data = read_bus();
+      write_to_register(bus_data, REGISTER_B);
     }
 
-    // special case: data from register a to register b
-    if(output_A_enabled && input_B_enabled && !clock_high && clock_high_before){
+    // special case: register a writes and register b reads at the same time
+    if(output_A_enabled && input_B_enabled && clock_is_falling){
       register_b_data = register_a_data;
       writeToShiftRegister(register_b_data, REGISTER_B);
     }
 
-    // write bus
-    if(output_A_enabled && !clock_high && clock_high_before){
+    // write to bus
+    if(output_A_enabled && clock_is_falling){
       enable_bus_output(register_a_data);
       bus_data = register_a_data;
     }
-    
-    if(!output_A_enabled && !clock_high && clock_high_before){
+    if(!output_A_enabled && clock_is_falling){
       disable_bus_output();
     }
-
-    if(clock_high){
-      clock_high_before = true;
-    }
-
-    if(!clock_high && clock_high_before){
-      clock_high_before = false;
-      Serial.println("Clock changes from HIGH to LOW");
-    }   
 }
 
-void check_clock(){
+bool check_clock(){
   analogA7value = analogRead(CLK);
   if(analogA7value > 800){
-    clock_high = 1;
+    return HIGH;
   } else if(analogA7value < 250) {
-    clock_high = 0;
+    return LOW;
   }
+}
+
+bool check_falling_clock(){
+  if(clock_high){
+      clock_high_before = true;
+  }
+
+  if(!clock_high && clock_high_before){
+    clock_high_before = false;
+    Serial.println("Clock changes from HIGH to LOW");
+    return true;
+  } else {
+    return false;
+  }
+}
+void write_to_register(byte data, byte reg){
+  if(reg == REGISTER_A){
+    Serial.println("Read BUS DATA into Register A");
+    register_a_data = data;
+  } else if(reg == REGISTER_B){
+    Serial.println("Read BUS DATA into Register B");
+    register_b_data = data;
+  }
+  Serial.print("BUS DATA: ");
+  Serial.println(data);
+  Serial.println();
+  writeToShiftRegister(data, reg);
+  
 }
 
 void change_led_builtin_state(){
@@ -188,7 +197,7 @@ void writeToShiftRegister(byte data, byte shiftregister){
   digitalWrite(latch_pin, HIGH);
 }
 
-void read_bus(){
+byte read_bus(){
   pinMode(BIT0, INPUT);
   pinMode(BIT1, INPUT);
   pinMode(BIT2, INPUT);
@@ -198,32 +207,34 @@ void read_bus(){
   pinMode(BIT6, INPUT);
   pinMode(BIT7, INPUT);
 
-  bus_data = 0;
+  byte data = 0;
 
   if(digitalRead(BIT0)){
-    bus_data = bus_data + 1;
+    data = data + 1;
   }
   if(digitalRead(BIT1)){
-    bus_data = bus_data + 2;
+    data = data + 2;
   }
   if(digitalRead(BIT2)){
-    bus_data = bus_data + 4;
+    data = data + 4;
   }
   if(digitalRead(BIT3)){
-    bus_data = bus_data + 8;
+    data = data + 8;
   }
   if(digitalRead(BIT4)){
-    bus_data = bus_data + 16;
+    data = data + 16;
   }
   if(digitalRead(BIT5)){
-    bus_data = bus_data + 32;
+    data = data + 32;
   }
   if(digitalRead(BIT6)){
-    bus_data = bus_data + 64;
+    data = data + 64;
   }
   if(digitalRead(BIT7)){
-    bus_data = bus_data + 128;
+    data = data + 128;
   }
+
+  return data;
 }
 
 void read_control_signals(){
@@ -267,9 +278,9 @@ void enable_bus_output(byte data){
     Serial.print(outputData[i]);
   }
   Serial.println();
+  Serial.println();
 
   for(int i=0; i < sizeof(outputData); i++){
-    Serial.print(outputData[i]);
     if(outputData[i] == HIGH){
       digitalWrite(i+2, HIGH);
     } else {
@@ -289,6 +300,7 @@ void disable_bus_output(){
   pinMode(BIT7, OUTPUT);
   
   Serial.println("Disable Output");
+  Serial.println();
   for(int i=0; i < 8; i++){
     digitalWrite(i+2, LOW);
   }
