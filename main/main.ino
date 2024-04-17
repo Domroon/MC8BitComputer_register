@@ -63,6 +63,8 @@ bool clock_high_before = false;
 byte numberToDisplay = 0;
 
 byte bus_data = 0;
+byte register_a_data = 0;
+byte register_b_data = 0;
 
 // control signals
 bool input_A_enabled = false;
@@ -101,6 +103,9 @@ void loop() {
     check_clock();
     read_control_signals();
 
+
+    
+
     // read bus
     if(input_A_enabled && !clock_high && clock_high_before){
       read_bus();
@@ -108,6 +113,7 @@ void loop() {
       Serial.print("BUS DATA: ");
       Serial.println(bus_data);
       writeToShiftRegister(bus_data, REGISTER_A);
+      register_a_data = bus_data;
     }
     if(input_B_enabled && !clock_high && clock_high_before){
       read_bus();
@@ -115,6 +121,23 @@ void loop() {
       Serial.print("BUS DATA: ");
       Serial.println(bus_data);
       writeToShiftRegister(bus_data, REGISTER_B);
+      register_b_data = bus_data;
+    }
+
+    // special case: data from register a to register b
+    if(output_A_enabled && input_B_enabled && !clock_high && clock_high_before){
+      register_b_data = register_a_data;
+      writeToShiftRegister(register_b_data, REGISTER_B);
+    }
+
+    // write bus
+    if(output_A_enabled && !clock_high && clock_high_before){
+      enable_bus_output(register_a_data);
+      bus_data = register_a_data;
+    }
+    
+    if(!output_A_enabled && !clock_high && clock_high_before){
+      disable_bus_output();
     }
 
     if(clock_high){
@@ -219,4 +242,63 @@ void read_control_signals(){
   } else {
     input_B_enabled = false;
   }
+}
+
+void enable_bus_output(byte data){
+  pinMode(BIT0, OUTPUT);
+  pinMode(BIT1, OUTPUT);
+  pinMode(BIT2, OUTPUT);
+  pinMode(BIT3, OUTPUT);
+  pinMode(BIT4, OUTPUT);
+  pinMode(BIT5, OUTPUT);
+  pinMode(BIT6, OUTPUT);
+  pinMode(BIT7, OUTPUT);
+
+  Serial.print("outputData in Decimal: ");
+  Serial.println(data);
+  bool outputData[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+  for(int i=0; i < sizeof(outputData); i++){
+    outputData[i] = bitRead(data, i);
+  }
+
+  Serial.print("outputData in Binary: ");
+  for(int i=0; i < sizeof(outputData); i++){
+    Serial.print(outputData[i]);
+  }
+  Serial.println();
+
+  for(int i=0; i < sizeof(outputData); i++){
+    Serial.print(outputData[i]);
+    if(outputData[i] == HIGH){
+      digitalWrite(i+2, HIGH);
+    } else {
+      digitalWrite(i+2, LOW);
+    }
+  }
+}
+
+void disable_bus_output(){
+  pinMode(BIT0, OUTPUT);
+  pinMode(BIT1, OUTPUT);
+  pinMode(BIT2, OUTPUT);
+  pinMode(BIT3, OUTPUT);
+  pinMode(BIT4, OUTPUT);
+  pinMode(BIT5, OUTPUT);
+  pinMode(BIT6, OUTPUT);
+  pinMode(BIT7, OUTPUT);
+  
+  Serial.println("Disable Output");
+  for(int i=0; i < 8; i++){
+    digitalWrite(i+2, LOW);
+  }
+
+  pinMode(BIT0, INPUT);
+  pinMode(BIT1, INPUT);
+  pinMode(BIT2, INPUT);
+  pinMode(BIT3, INPUT);
+  pinMode(BIT4, INPUT);
+  pinMode(BIT5, INPUT);
+  pinMode(BIT6, INPUT);
+  pinMode(BIT7, INPUT);
 }
