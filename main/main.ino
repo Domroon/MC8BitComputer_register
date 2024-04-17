@@ -90,15 +90,8 @@ void setup() {
   writeToShiftRegister(0, REGISTER_A);
   writeToShiftRegister(0, REGISTER_B);
 
-  // bus input
-  pinMode(BIT0, INPUT);
-  pinMode(BIT1, INPUT);
-  pinMode(BIT2, INPUT);
-  pinMode(BIT3, INPUT);
-  pinMode(BIT4, INPUT);
-  pinMode(BIT5, INPUT);
-  pinMode(BIT6, INPUT);
-  pinMode(BIT7, INPUT);
+  // init bus connection
+  set_bus_connection_as(INPUT);
 }
 
 void loop() {
@@ -133,6 +126,12 @@ void loop() {
     }
 }
 
+void set_bus_connection_as(bool input_or_output){
+  for(int i=BIT0; i <= BIT7; i++){
+    pinMode(i, input_or_output);
+  }
+}
+
 bool check_clock(){
   analogA7value = analogRead(CLK);
   if(analogA7value > 800){
@@ -155,6 +154,7 @@ bool check_falling_clock(){
     return false;
   }
 }
+
 void write_to_register(byte data, byte reg){
   if(reg == REGISTER_A){
     Serial.println("Read BUS DATA into Register A");
@@ -200,14 +200,7 @@ void writeToShiftRegister(byte data, byte shiftregister){
 }
 
 byte read_bus(){
-  pinMode(BIT0, INPUT);
-  pinMode(BIT1, INPUT);
-  pinMode(BIT2, INPUT);
-  pinMode(BIT3, INPUT);
-  pinMode(BIT4, INPUT);
-  pinMode(BIT5, INPUT);
-  pinMode(BIT6, INPUT);
-  pinMode(BIT7, INPUT);
+  set_bus_connection_as(INPUT);
 
   byte data = 0;
 
@@ -258,14 +251,7 @@ void read_control_signals(){
 }
 
 void enable_bus_output(byte data){
-  pinMode(BIT0, OUTPUT);
-  pinMode(BIT1, OUTPUT);
-  pinMode(BIT2, OUTPUT);
-  pinMode(BIT3, OUTPUT);
-  pinMode(BIT4, OUTPUT);
-  pinMode(BIT5, OUTPUT);
-  pinMode(BIT6, OUTPUT);
-  pinMode(BIT7, OUTPUT);
+  set_bus_connection_as(OUTPUT);
 
   Serial.print("outputData in Decimal: ");
   Serial.println(data);
@@ -292,27 +278,11 @@ void enable_bus_output(byte data){
 }
 
 void disable_bus_output(){
-  pinMode(BIT0, OUTPUT);
-  pinMode(BIT1, OUTPUT);
-  pinMode(BIT2, OUTPUT);
-  pinMode(BIT3, OUTPUT);
-  pinMode(BIT4, OUTPUT);
-  pinMode(BIT5, OUTPUT);
-  pinMode(BIT6, OUTPUT);
-  pinMode(BIT7, OUTPUT);
-  
+  set_bus_connection_as(OUTPUT);
   Serial.println("Disable Output");
   Serial.println();
   for(int i=0; i < 8; i++){
     digitalWrite(i+2, LOW);
   }
-
-  pinMode(BIT0, INPUT);
-  pinMode(BIT1, INPUT);
-  pinMode(BIT2, INPUT);
-  pinMode(BIT3, INPUT);
-  pinMode(BIT4, INPUT);
-  pinMode(BIT5, INPUT);
-  pinMode(BIT6, INPUT);
-  pinMode(BIT7, INPUT);
+  set_bus_connection_as(INPUT);
 }
