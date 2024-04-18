@@ -22,6 +22,7 @@
 #define AI                  A2      // enable Register A INPUT
 #define AO                  A3      // enable Register A OUTPUT
 #define BI                  A4      // enable Register B INPUT
+#define EO                  A5      // enable ALU result OUTPUT
 
 #define CLK                 A7
 
@@ -69,11 +70,13 @@ bool clock_is_falling = false;
 byte bus_data = 0;
 byte register_a_data = 0;
 byte register_b_data = 0;
+byte alu_result = 0;
 
 // Control Signals
 bool input_A_enabled = false;
 bool output_A_enabled = false;
 bool input_B_enabled = false;
+bool output_ALU_enabled = false;
 
 void setup() {
   Serial.begin(9600);
@@ -100,6 +103,14 @@ void loop() {
     clock_is_falling = check_falling_clock();
     read_control_signals();
 
+    // ALU calculation
+    if(clock_is_falling){
+      alu_result = add_registers(register_a_data, register_b_data);
+      Serial.print("ALU result: ");
+      Serial.println(alu_result);
+      Serial.println();
+    }
+
     // read from bus
     if(input_A_enabled && clock_is_falling){
       bus_data = read_bus();
@@ -116,12 +127,24 @@ void loop() {
       writeToShiftRegister(register_b_data, REGISTER_B);
     }
 
+    // special case: alu result on the bus and register a as input
+    if(output_ALU_enabled && input_A_enabled && clock_is_falling){
+      register_a_data = alu_result;
+      writeToShiftRegister(register_b_data, REGISTER_B);
+    }
+    // resolve bug: ALU result is showing only for a short moment on the bus when EO is enabled
+
     // write to bus
     if(output_A_enabled && clock_is_falling){
       enable_bus_output(register_a_data);
       bus_data = register_a_data;
     }
-    if(!output_A_enabled && clock_is_falling){
+    if(output_ALU_enabled && clock_is_falling){
+      enable_bus_output(alu_result);
+      bus_data = alu_result;
+    }
+
+    if((!output_A_enabled || !output_ALU_enabled) && clock_is_falling){
       disable_bus_output();
     }
 }
@@ -248,6 +271,11 @@ void read_control_signals(){
   } else {
     input_B_enabled = false;
   }
+  if(digitalRead(EO)){
+    output_ALU_enabled = true;
+  } else {
+    output_ALU_enabled = false;
+  }
 }
 
 void enable_bus_output(byte data){
@@ -285,4 +313,8 @@ void disable_bus_output(){
     digitalWrite(i+2, LOW);
   }
   set_bus_connection_as(INPUT);
+}
+
+byte add_registers(byte register_a, byte register_b){
+  return register_a + register_b;
 }
